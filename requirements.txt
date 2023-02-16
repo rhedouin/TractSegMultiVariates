@@ -1,0 +1,11 @@
+tractseg
+hotelling
+seaborn
+numpy
+matplotlib
+scipy
+pandas
+tqdm
+scikit-learn
+statsmodels
+dipy==1.6.0
