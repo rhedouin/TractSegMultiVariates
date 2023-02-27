@@ -48,7 +48,6 @@ def parse_subjects_file(file_path):
                 print("Using {} manually specified bundles.".format(len(bundles)))
             elif l.startswith("# plot_3D="):
                 plot_3D_path = l.split("=")[1]
-
         if bundles is None:
             bundles = dataset_specific_utils.get_bundle_names("All_tractometry")[1:]
 
@@ -264,8 +263,11 @@ def plot_tractometry_with_pvalue(values, meta_data, bundles, selected_bundles, o
 
             if tracking_format == "tck":
                 tracking_path = join(plot_3D_path, tracking_dir, bundle + ".tck")
+            elif tracking_format == "vtk":
+                tracking_path = join(plot_3D_path, tracking_dir, bundle + ".vtk")
             else:
                 tracking_path = join(plot_3D_path, tracking_dir, bundle + ".trk")
+
             ending_path = join(plot_3D_path, "endings_segmentations", bundle + "_b.nii.gz")
 
             if not os.path.isfile(tracking_path):
@@ -274,15 +276,12 @@ def plot_tractometry_with_pvalue(values, meta_data, bundles, selected_bundles, o
                 raise ValueError("Could not find: " + ending_path)
 
             plot_utils_with_saving.plot_bundles_with_metric(tracking_path, atlas_path, ending_path, bundle,
-                                                            metric, plot_3D_type)
+                                                            metric, plot_3D_type, output_path)
         if y_range is not None:
             ax.set_ylim(y_range[0], y_range[1])
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=200)
-
-    if save_csv:
-        results_df.to_csv(output_path + ".csv")
 
 
 def two_floats(value):
@@ -318,7 +317,7 @@ def main():
     parser.add_argument("--tracking_dir", metavar="folder_name",
                         help="Set name of directory containing the tracking output (see same option for 'Tracking').",
                         default="auto")
-    parser.add_argument("--tracking_format", metavar="tck|trk|trk_legacy", choices=["tck", "trk", "trk_legacy"],
+    parser.add_argument("--tracking_format", metavar="tck|trk|vtk|trk_legacy", choices=["tck", "trk", "vtk", "trk_legacy"],
                         help="If using --plot3D you have to specify the format of the trackings which will get loaded."
                              "(default: trk_legacy)",
                         default="trk_legacy")
@@ -353,7 +352,7 @@ def main():
                    
     # Show p-value for each position, not only significant areas
     show_detailed_p = True
-    hide_legend = False
+    hide_legend = True
     show_color_bar = True  # colorbar on 3D plot (this is only relevant for metric plot; pval will never show bar)
     nperm = args.nperm
 
@@ -388,7 +387,7 @@ def main():
     values = {}
     for subject in meta_data["subject_id"]:
         raw = np.loadtxt(base_path.replace("SUBJECT_ID", subject), delimiter=";", skiprows=1).transpose()
-        values[subject] = raw
+        values[subject] = 1000*raw
 
     plot_tractometry_with_pvalue(values, meta_data, all_bundles, selected_bundles, args.output_path,
                                  args.alpha, FWE_method, analysis_type, correct_mult_tract_comp,

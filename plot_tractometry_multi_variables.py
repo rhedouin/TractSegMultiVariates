@@ -132,8 +132,8 @@ def plot_tractometry_with_pvalue(values, meta_data, nb_variable, bundles, select
                                  FWE_method,
                                  analysis_type, correct_mult_tract_comp, show_detailed_p, nperm=1000,
                                  hide_legend=False, plot_3D_path=None, plot_3D_type="none",
-                                 tracking_format="trk_legacy", tracking_dir="auto", show_color_bar=True,
-                                 save_csv=False, plot_pvalue=False, y_range=None):
+                                 tracking_format="trk_legacy", tracking_dir="auto", atlas_path="", show_color_bar=True,
+                                 save_csv=False, y_range=None):
     NR_POINTS = values[meta_data["subject_id"][0]].shape[1]
     selected_bun_indices = [bundles.index(b) for b in selected_bundles]
     print(selected_bun_indices)
@@ -228,13 +228,6 @@ def plot_tractometry_with_pvalue(values, meta_data, nb_variable, bundles, select
                     else:
                         data["group"].append("Group 1, var : " + str(var))
 
-        if plot_pvalue:
-            for position in range(NR_POINTS):
-                data["position"].append(position)
-                data["subject"].append(subject)
-                data["fa"].append(pvalues[position])
-                data["group"].append("pvalues")
-
         # Plot
         ax = sns.lineplot(x="position", y="fa", data=data, ax=axes[i], hue="group")
         # units="subject", estimator=None, lw=1)  # each subject as single line
@@ -301,8 +294,11 @@ def plot_tractometry_with_pvalue(values, meta_data, nb_variable, bundles, select
 
             if tracking_format == "tck":
                 tracking_path = join(plot_3D_path, tracking_dir, bundle + ".tck")
+            elif tracking_format == "vtk":
+                tracking_path = join(plot_3D_path, tracking_dir, bundle + ".vtk")
             else:
                 tracking_path = join(plot_3D_path, tracking_dir, bundle + ".trk")
+
             ending_path = join(plot_3D_path, "endings_segmentations", bundle + "_b.nii.gz")
 
             if not os.path.isfile(tracking_path):
@@ -311,7 +307,8 @@ def plot_tractometry_with_pvalue(values, meta_data, nb_variable, bundles, select
                 raise ValueError("Could not find: " + ending_path)
 
             plot_utils_with_saving.plot_bundles_with_metric(tracking_path, atlas_path, ending_path, bundle,
-                                                            metric, plot_3D_type)
+                                                            metric, plot_3D_type, output_path)
+  
         if y_range is not None:
             ax.set_ylim(y_range[0], y_range[1])
 
@@ -352,15 +349,15 @@ def main():
                         default="none")
     parser.add_argument("--save_csv", action="store_true", help="save results also as csv",
                         default=False)
-    parser.add_argument("--plot-pvalue", action="store_true", help="plot pvalue",
-                        default=False)
     parser.add_argument("--tracking_dir", metavar="folder_name",
                         help="Set name of directory containing the tracking output (see same option for 'Tracking').",
                         default="auto")
-    parser.add_argument("--tracking_format", metavar="tck|trk|trk_legacy", choices=["tck", "trk", "trk_legacy"],
+    parser.add_argument("--tracking_format", metavar="tck|trk|vtk|trk_legacy", choices=["tck", "trk", "vtk", "trk_legacy"],
                         help="If using --plot3D you have to specify the format of the trackings which will get loaded."
                              "(default: trk_legacy)",
                         default="trk_legacy")
+    parser.add_argument("--atlas_path", metavar="atlas_path", help="Atlas reference for the input tracks",
+                        default="")
     parser.add_argument('--range', '-r', metavar='l u', default=None, type=two_floats,
                         help='Range of metric (y-axis) to plot. Specify lower (l) and upper (u) bound'
                              '(default: None)')
@@ -369,8 +366,6 @@ def main():
                         default="alphaFWE")
 
     args = parser.parse_args()
-
-    print("toto")
 
     # Choose how to define significance: by corrected alphaFWE or by clusters of values smaller than uncorrected alpha
     # clusterFWE not recommended because misses highly significant areas just because cluster is not big enough.
@@ -442,7 +437,7 @@ def main():
                                  show_detailed_p, nperm=nperm, hide_legend=hide_legend,
                                  plot_3D_path=plot_3D_path, plot_3D_type=args.plot3D,
                                  tracking_format=args.tracking_format, tracking_dir=args.tracking_dir,
-                                 show_color_bar=show_color_bar, save_csv=args.save_csv, plot_pvalue=args.plot_pvalue,
+                                 atlas_path=args.atlas_path, show_color_bar=show_color_bar, save_csv=args.save_csv,
                                  y_range=args.range)
 
 

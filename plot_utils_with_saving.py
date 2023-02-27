@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt
 plt.ioff()
 
 
-def plot_bundles_with_metric(bundle_path, atlas_path, endings_path, bundle, metrics, plot_3D_type):
+def plot_bundles_with_metric(bundle_path, atlas_path, endings_path, bundle, metrics, plot_3D_type, output_path):
     # Settings
     NR_SEGMENTS = 100
     ANTI_INTERPOL_MULT = 1  # increase number of points to avoid interpolation to blur the colors
@@ -67,8 +67,20 @@ def plot_bundles_with_metric(bundle_path, atlas_path, endings_path, bundle, metr
         beginnings = binary_dilation(beginnings)
 
     # # Load trackings
+    print(bundle_path)
+    print(atlas_path)
     new_tract = load_tractogram(bundle_path, atlas_path)
     streamlines = new_tract.streamlines
+    # new_streamlines = streamlines
+    # sys.exit()
+
+    # for jdx, sl in enumerate(streamlines):
+    #     # print(streamlines[0])
+    #     streamlines[jdx][0,:] = -streamlines[jdx][0,:]
+    #     streamlines[jdx][1,:] = -streamlines[jdx][1,:]
+
+    # save_tractogram(streamlines, "Comparaison_with_working_stuff.tck")
+    # sys.exit()
 
     # Reduce streamline count
     streamlines = streamlines[::2]
@@ -125,24 +137,36 @@ def plot_bundles_with_metric(bundle_path, atlas_path, endings_path, bundle, metr
             segment_idxs_eqlen.append(r)
         segment_idxs = segment_idxs_eqlen
 
+    new_tract_path = os.path.dirname(output_path) + "/" + os.path.basename(output_path).split(".")[0] + "_" + bundle.split(".")[0] + "_resampled.tck"
+    output_vtk =  os.path.dirname(output_path) + "/" + os.path.basename(output_path).split(".")[0]  + "_" + bundle.split(".")[0] +  "_resampled_with_" +  plot_3D_type + ".vtk"
+
     print("Save resampled tract")
     new_tract.streamlines = streamlines
-    save_tractogram(new_tract, bundle_path.split(".")[0] + "_resampled.tck")
+    save_tractogram(new_tract,  new_tract_path)
+    # print(os.path.basename(output_path).split(".")[0])
 
     # Put the way to your tckconvert
-    output_vtk =  os.path.basename(bundle_path.split(".")[0] + "_resampled_with_" +  plot_3D_type + ".vtk")
-
     print("Convert to vtk : " + output_vtk)
     tckconvert = "/home/rhedouin/Software/mrtrix3/bin/tckconvert"
-    tckconvertCommand = [tckconvert, bundle_path.split(".")[0] + "_resampled.tck", output_vtk, "-force"]
+    tckconvertCommand = [tckconvert, new_tract_path, output_vtk, "-force"]
     call(tckconvertCommand)
-
     f = open(output_vtk, "a")
 
     n = 0
     for jdx, sl in enumerate(streamlines):
         for idx, p in enumerate(sl):
             n = n+1
+
+    # f.write("# vtk DataFile Version 1.0\n")
+    # f.write("Data values for Tracks\n")
+    # f.write("ASCII\n")
+    # f.write("DATASET POLYDATA\n")
+    # f.write("POINTS " + str(n) + " float\n")
+
+    # for jdx, sl in enumerate(streamlines):
+    #     colors_sl = []
+    #     for idx, p in enumerate(sl):
+    #         f.write(str(p[0]) + " " + str(p[1]) + " " + str(p[2]) + "\n")
 
     f.write("POINT_DATA " + str(n) + "\n")
     f.write("SCALARS " + plot_3D_type + " float 1\n")
